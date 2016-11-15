@@ -13,7 +13,8 @@ from sentry.api.base import DocSection
 from sentry.api.bases.project import ProjectEndpoint, ProjectEventPermission
 from sentry.api.serializers import serialize
 from sentry.api.serializers.models.group import (
-    StreamGroupSerializer, serialize_subscription_details
+    StreamGroupSerializer,
+    GroupSerializer as ActualGroupSerializer,
 )
 from sentry.app import search
 from sentry.constants import DEFAULT_SORT_OPTION
@@ -580,11 +581,9 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                     },
                 )
 
-            # XXX: This is a bit of a hack, maybe this method shouldn't take
-            # the GroupSubscription instance at all...?
-            result['subscriptionDetails'] = serialize_subscription_details(
+            result['subscriptionDetails'] = ActualGroupSerializer._serialize_subscription_details(
                 result['isSubscribed'],
-                GroupSubscription(reason=GroupSubscriptionReason.unknown),
+                GroupSubscriptionReason.unknown,
             )
 
         if result.get('isPublic'):

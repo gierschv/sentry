@@ -21,25 +21,23 @@ from sentry.utils.db import attach_foreignkey
 from sentry.utils.http import absolute_uri
 from sentry.utils.safe import safe_execute
 
-REASON_MAP = {
-    GroupSubscriptionReason.comment: 'commented',
-    GroupSubscriptionReason.assigned: 'assigned',
-    GroupSubscriptionReason.bookmark: 'bookmarked',
-    GroupSubscriptionReason.status_change: 'changed_status',
-}
-
-
-def serialize_subscription_details(is_subscribed, subscription):
-    if is_subscribed and subscription is not None:
-        return {
-            'reason': REASON_MAP.get(subscription.reason, 'unknown'),
-        }
-    else:
-        return None
-
 
 @register(Group)
 class GroupSerializer(Serializer):
+    REASON_MAP = {
+        GroupSubscriptionReason.comment: 'commented',
+        GroupSubscriptionReason.assigned: 'assigned',
+        GroupSubscriptionReason.bookmark: 'bookmarked',
+        GroupSubscriptionReason.status_change: 'changed_status',
+    }
+
+    def _serialize_subscription_details(self, is_subscribed, reason=None):
+        if is_subscribed and reason is not None:
+            return {
+                'reason': self.REASON_MAP.get(reason, 'unknown'),
+            }
+        else:
+            return None
 
     def _get_subscriptions(self, item_list, user):
         results = {group.id: None for group in item_list}
@@ -227,9 +225,9 @@ class GroupSerializer(Serializer):
             'assignedTo': attrs['assigned_to'],
             'isBookmarked': attrs['is_bookmarked'],
             'isSubscribed': is_subscribed,
-            'subscriptionDetails': serialize_subscription_details(
+            'subscriptionDetails': self._serialize_subscription_details(
                 is_subscribed,
-                subscription,
+                getattr(subscription, 'reason', None),
             ),
             'hasSeen': attrs['has_seen'],
             'annotations': attrs['annotations'],
