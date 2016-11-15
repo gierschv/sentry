@@ -4,7 +4,7 @@ import six
 
 from django.core.urlresolvers import reverse
 
-from sentry.models import Authenticator, AuthIdentity, AuthProvider, User
+from sentry.models import Authenticator, AuthIdentity, AuthProvider, User, UserEmail
 from sentry.testutils import APITestCase
 
 
@@ -42,6 +42,12 @@ class UserDetailsTest(APITestCase):
             type=3,  # u2f
             user=user,
         )
+        # Add an additional secondary email address
+        email = UserEmail.objects.create(
+            user=user,
+            email='stebe@example.com',
+            is_verified=True,
+        )
 
         self.login_as(user=user)
 
@@ -59,6 +65,15 @@ class UserDetailsTest(APITestCase):
         assert 'authenticators' in resp.data
         assert len(resp.data['authenticators']) == 1
         assert resp.data['authenticators'][0]['id'] == six.text_type(auth.id)
+        assert len(resp.data['emails']) == 2
+        # Kinda unknown id here unless we queried to get it, which defeats the purpose
+        # A UserEmail exists for a primary email address implicitly.
+        # assert resp.data['emails'][0]['id'] ==
+        assert resp.data['emails'][0]['email'] == user.email
+        assert resp.data['emails'][0]['is_verified'] is False
+        assert resp.data['emails'][1]['id'] == six.text_type(email.id)
+        assert resp.data['emails'][1]['email'] == 'stebe@example.com'
+        assert resp.data['emails'][1]['is_verified'] is True
 
     def test_superuser(self):
         user = self.create_user(email='a@example.com')
